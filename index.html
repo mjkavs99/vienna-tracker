@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Vienna · Feeding</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF7F1; --card:#FFFFFF; --ink:#1C2B2D; --muted:#5E6E6C;
+    --faint:#8A9694; --line:#E7E0D4; --line2:#F0EBE0;
+    --bottle:#2F7D6B; --breast:#8FC0B2; --breast2:#C4DED6;
+    --weight:#B5642E; --cool:#6E8BA0; --cool-soft:#EAF0F4;
+    --up:#2F7D6B; --up-soft:#E4F0EC; --down:#C97B3C; --down-soft:#F7ECE0;
+    --dirty:#B79B73;
+    --shadow:0 1px 2px rgba(28,43,45,.04), 0 8px 24px rgba(28,43,45,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:"Inter",system-ui,-apple-system,sans-serif;
+    font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased;line-height:1.4;padding:0 0 64px}
+  .num{font-variant-numeric:tabular-nums lining-nums}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px}
+  h1,h2,h3{font-family:"Bricolage Grotesque",sans-serif;margin:0;letter-spacing:-.01em}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(250,247,241,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .hbar{display:flex;align-items:center;gap:14px;padding:14px 0;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:9px}
+  .brand h1{font-size:21px;font-weight:800}
+  .brand .sub{font-size:12px;color:var(--faint);font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+  .spacer{flex:1}
+  .datenav{display:flex;align-items:center;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px}
+  .datenav button{border:0;background:transparent;color:var(--ink);width:30px;height:30px;border-radius:8px;font-size:16px;cursor:pointer;line-height:1}
+  .datenav button:hover{background:var(--line2)}
+  .datenav button:disabled{color:var(--line);cursor:default;background:transparent}
+  .datenav .lbl{min-width:120px;text-align:center;font-size:13px;font-weight:600;font-family:"Bricolage Grotesque"}
+  .datenav .lbl small{display:block;font-family:"Inter";font-size:10px;color:var(--faint);font-weight:500}
+  .ghostbtn{border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:10px;cursor:pointer}
+  .ghostbtn:hover{border-color:var(--up);color:var(--up)}
+  .ghostbtn.primary{background:var(--up);color:#fff;border-color:var(--up)}
+  .ghostbtn.primary:hover{background:#27695a;color:#fff}
+  .ghostbtn.icon{width:34px;padding:8px 0;text-align:center;font-size:15px}
+  .setpanel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin:18px 0 4px;box-shadow:var(--shadow)}
+  .setpanel h3{font-size:15px;margin-bottom:6px}
+  .sp-note{font-size:12px;color:var(--muted);line-height:1.5;margin:6px 0}
+  .sp-note code{background:var(--line2);padding:1px 5px;border-radius:5px;font-size:11px}
+  .sp-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:12px 0}
+  .setpanel label{display:flex;flex-direction:column;font-size:12px;font-weight:600;color:var(--muted);gap:4px}
+  .setpanel label small{font-weight:500;color:var(--faint);font-size:10.5px}
+  .setpanel input{font:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink)}
+  .setpanel input:focus{outline:none;border-color:var(--up)}
+  .sp-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:4px}
+  @media (max-width:680px){.sp-grid{grid-template-columns:1fr}}
+  .freshline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin:16px 0 2px}
+  .freshline .fdot{width:9px;height:9px;border-radius:50%;background:var(--up);flex:none;box-shadow:0 0 0 3px var(--up-soft)}
+  .freshline .fdot.warn{background:var(--down);box-shadow:0 0 0 3px var(--down-soft)}
+  .freshline b{color:var(--ink);font-weight:600}
+  .freshline .sep{color:var(--faint)}
+
+  .hero{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin:22px 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+  .eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600;display:flex;align-items:center;gap:8px}
+  .badge{font-size:10px;letter-spacing:.03em;background:var(--down-soft);color:var(--down);padding:2px 7px;border-radius:20px;text-transform:none;font-weight:700}
+  .bignum{font-family:"Bricolage Grotesque";font-weight:800;font-size:60px;line-height:.96;letter-spacing:-.03em;margin-top:6px}
+  .bignum .unit{font-size:23px;color:var(--faint);font-weight:700;margin-left:4px}
+  .split{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .split b{color:var(--ink);font-weight:600}
+  .herocompare{display:flex;align-items:baseline;gap:14px;margin-top:14px;flex-wrap:wrap}
+  .hc-avg{font-size:13px;color:var(--muted)}
+  .hc-avg b{font-family:"Bricolage Grotesque";font-size:16px;font-weight:700;color:var(--ink);margin-left:6px}
+  .hc-delta{font-family:"Bricolage Grotesque";font-size:16px;font-weight:800;padding:3px 11px;border-radius:9px;background:var(--up-soft)}
+  .hc-delta.down{background:var(--down-soft)} .hc-delta.dim{background:var(--line2)}
+  .up{color:var(--up)} .down{color:var(--down)} .dim{color:var(--faint)}
+  .pace{margin-top:14px;padding-top:13px;border-top:1px solid var(--line2);font-size:13px;color:var(--muted);line-height:1.45}
+  .snapnote{margin-top:11px;font-size:12px;color:var(--down);font-weight:600;line-height:1.4}
+  .snapnote b{color:var(--ink)}
+  .pace b{color:var(--ink);font-weight:600}
+  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+  .stat .k{font-size:11px;color:var(--faint);font-weight:600}
+  .stat .v{font-family:"Bricolage Grotesque";font-weight:700;font-size:23px;margin-top:3px}
+  .stat .v small{font-size:12px;color:var(--faint);font-weight:600;font-family:"Inter"}
+
+  section{margin-top:26px}
+  .sechead{display:flex;align-items:baseline;gap:10px;margin-bottom:13px;flex-wrap:wrap}
+  .sechead h2{font-size:16px;font-weight:700}
+  .sechead .hint{font-size:12px;color:var(--faint)}
+  .chartcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 12px;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .legend i.line{height:0;width:16px;border-top:2.5px solid}
+  .legend i.dash{height:0;width:16px;border-top:2.5px dashed}
+  .legend i.hatch{background:repeating-linear-gradient(45deg,#9cc4ba,#9cc4ba 3px,#cfe3dc 3px,#cfe3dc 6px)}
+
+  .panelgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+  table{width:100%;border-collapse:collapse}
+  .tablecard{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .tscroll{overflow-x:auto}
+  th,td{text-align:right;padding:11px 13px;font-size:13px;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--faint);font-weight:600;border-bottom:1px solid var(--line);background:#FCFAF5}
+  thead th small{display:block;font-weight:500;text-transform:none;letter-spacing:0}
+  thead th.avg{color:var(--cool)}
+  tbody td{border-bottom:1px solid var(--line2)}
+  tbody tr:last-child td{border-bottom:0}
+  .rowname{font-family:"Bricolage Grotesque";font-weight:700;font-size:13px}
+  .cellmain{font-family:"Bricolage Grotesque";font-weight:700;font-size:14.5px}
+  .cellsub{font-size:10.5px;color:var(--faint);margin-top:1px}
+  thead th.hl{background:#EEF5F2;color:var(--up)}
+  thead th.hlT{border-left:2px solid var(--up)}
+  td.hl{background:#F4F9F7}
+  td.hlT{border-left:2px solid var(--up)}
+  tbody tr:hover td{background:#FCFBF8}
+  tbody tr:hover td.hl{background:#EAF4F0}
+  .totrow td{background:#FCFAF5;border-top:1px solid var(--line)}
+  .totrow .cellmain{font-size:16px}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);margin-left:6px;animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  .diaperhead{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;margin-bottom:14px}
+  .dbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .dbox .k{font-size:11px;color:var(--faint);font-weight:600}
+  .dbox .v{font-family:"Bricolage Grotesque";font-weight:800;font-size:30px;margin-top:2px}
+  .dbox.wet .v{color:var(--cool)} .dbox.dirty .v{color:var(--dirty)}
+  .dbox .sub{font-size:11px;color:var(--faint);margin-top:2px}
+
+  .empty{display:flex;flex-direction:column;gap:8px;justify-content:center;min-height:150px;color:var(--muted);font-size:13px;line-height:1.5}
+  .empty .ico{font-size:22px}
+  .empty b{color:var(--ink);font-weight:600}
+
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint);line-height:1.6}
+  footer b{color:var(--muted);font-weight:600}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:11px 18px;border-radius:11px;opacity:0;pointer-events:none;transition:.3s;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:680px){
+    .hero{grid-template-columns:1fr}
+    .bignum{font-size:52px}
+    .panelgrid{grid-template-columns:1fr}
+    .diaperhead{grid-template-columns:repeat(2,1fr)}
+    .dbox{padding:11px}
+    .dbox .v{font-size:24px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header><div class="wrap hbar">
+  <div class="brand"><h1>Vienna</h1><span class="sub">Feeding & Weight</span></div>
+  <div class="spacer"></div>
+  <div class="datenav">
+    <button id="prev" aria-label="Previous day">‹</button>
+    <div class="lbl" id="daylbl">—</div>
+    <button id="next" aria-label="Next day">›</button>
+  </div>
+  <button class="ghostbtn icon" id="refreshBtn" title="Refresh from cloud" style="display:none">↻</button>
+  <button class="ghostbtn" id="uploadBtn">Load export</button>
+  <button class="ghostbtn primary" id="publishBtn" title="Push data to the shared repo" style="display:none">Publish ↑</button>
+  <button class="ghostbtn icon" id="settingsBtn" title="Cloud settings">⚙</button>
+  <input type="file" id="file" accept=".csv,text/csv" style="display:none"/>
+</div></header>
+
+<div class="wrap">
+  <div class="setpanel" id="settings" style="display:none">
+    <h3>Shared cloud setup</h3>
+    <p class="sp-note">Both phones point at one GitHub repo. The dashboard reads <code>data.csv</code> from it on load. The token is needed only on the phone you publish from — it stays on this device and is never sent to the repo.</p>
+    <div class="sp-grid">
+      <label>Repo <small>owner/name</small><input id="cfgRepo" placeholder="yourname/vienna-tracker" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <label>Branch<input id="cfgBranch" placeholder="main" autocapitalize="off"></label>
+      <label>File path<input id="cfgPath" placeholder="data.csv" autocapitalize="off"></label>
+      <label>Publish token <small>fine-grained PAT · Contents R/W · this device only</small><input id="cfgToken" type="password" placeholder="github_pat_…" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+    </div>
+    <div class="sp-actions">
+      <button class="ghostbtn primary" id="cfgSave">Save &amp; load</button>
+      <button class="ghostbtn" id="cfgPublish">Publish current data ↑</button>
+      <button class="ghostbtn" id="cfgClose">Close</button>
+    </div>
+    <p class="sp-note" id="cfgStatus"></p>
+  </div>
+
+  <div class="freshline" id="freshline"></div>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="card">
+      <div class="eyebrow"><span id="heroWindow">Intake</span> <span id="partialBadge" class="badge" style="display:none"></span></div>
+      <div class="bignum num"><span id="intake">0</span><span class="unit">ml</span></div>
+      <div class="split" id="split"></div>
+      <div class="herocompare" id="heroCompare"></div>
+      <div class="snapnote" id="snapnote"></div>
+    </div>
+    <div class="statgrid">
+      <div class="stat"><div class="k">Feeds</div><div class="v num" id="sFeeds">—</div></div>
+      <div class="stat"><div class="k">Per feed (est)</div><div class="v num" id="sPer">—</div></div>
+      <div class="stat"><div class="k">Wet / mixed</div><div class="v num" id="sWet">—</div></div>
+      <div class="stat"><div class="k">Direct breast</div><div class="v num" id="sBreast">—</div></div>
+    </div>
+  </div>
+
+  <!-- DAILY INTAKE (moved up) -->
+  <section>
+    <div class="sechead"><h2>Daily intake</h2><span class="hint">bottle + breast (est. 1 min ≈ 1 ml) · last 10 days</span></div>
+    <div class="chartcard"><div id="intakeChart"></div>
+      <div class="legend">
+        <span><i style="background:var(--bottle)"></i>Bottle (measured)</span>
+        <span><i style="background:var(--breast)"></i>Breast (est.)</span>
+        <span><i class="hatch"></i>Today, partial</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTAKE x WEIGHT combo -->
+  <section>
+    <div class="sechead"><h2>Intake & weight</h2><span class="hint">does intake track with weight gain?</span></div>
+    <div class="chartcard"><div id="weightChart"></div>
+      <div class="legend">
+        <span><i style="background:var(--bottle)"></i>Daily intake</span>
+        <span><i class="line" style="border-color:var(--weight)"></i>Weight (g)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- BLOCK LINE CHART -->
+  <section>
+    <div class="sechead"><h2>Intake by time block</h2><span class="hint">four-hour blocks · where today sits vs the 3-day average</span></div>
+    <div class="chartcard"><div id="blockChart"></div>
+      <div class="legend" id="blockLegend"></div>
+    </div>
+  </section>
+
+  <!-- TABLE -->
+  <section>
+    <div class="sechead"><h2>Block detail</h2><span class="hint">ml · feeds · ml/feed</span></div>
+    <div class="tablecard"><div class="tscroll"><table>
+      <thead><tr id="thead"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div></div>
+  </section>
+
+  <!-- WHAT'S CHANGING (charts) -->
+  <section>
+    <div class="sechead"><h2>What's changing</h2><span class="hint">last 10 days · today marked</span></div>
+    <div class="panelgrid">
+      <div class="chartcard"><div class="eyebrow" style="margin-bottom:8px">Feeds per day <span class="dim" style="text-transform:none;letter-spacing:0">— how often she's initiating</span></div><div id="freqChart"></div></div>
+      <div class="chartcard"><div class="eyebrow" style="margin-bottom:8px">Ml per feed <span class="dim" style="text-transform:none;letter-spacing:0">— how much per sitting</span></div><div id="perChart"></div></div>
+    </div>
+  </section>
+
+  <!-- DIAPERS -->
+  <section>
+    <div class="sechead"><h2>Diaper breakdown</h2><span class="hint" id="diaperScope"></span></div>
+    <div class="diaperhead">
+      <div class="dbox wet"><div class="k">Wet / mixed</div><div class="v num" id="dWet">—</div><div class="sub" id="dWetAvg"></div></div>
+      <div class="dbox"><div class="k">Total changes</div><div class="v num" id="dTotal">—</div><div class="sub">total − wet/mixed = dirty</div></div>
+    </div>
+    <div class="chartcard"><div id="diaperChart"></div>
+      <div class="legend"><span><i style="background:var(--cool)"></i>Wet / mixed</span><span><i style="background:#DCE4EA"></i>Total</span></div>
+    </div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SEED_B64="VHlwZSxUaW1lc3RhbXAsRGF0ZSxUaW1lLEVuZCBUaW1lc3RhbXAsRHVyYXRpb24gKG1pbiksQW1vdW50LFVuaXQsU2lkZSxEaWFwZXIgVHlwZSxSYXNoLEZvb2QsQWxsZXJnZW4gVGFncyxNZWRpY2F0aW9uLERvc2UsVmFjY2luZSxWYWNjaW5lIFNpdGUsVGVtcGVyYXR1cmUsVGVtcCBVbml0LFRlbXAgTWV0aG9kLFdlaWdodCxXZWlnaHQgVW5pdCxIZWlnaHQsSGVpZ2h0IFVuaXQsSGVhZCBDaXJjLEhlYWQgQ2lyYyBVbml0LFNldmVyaXR5LFF1YWxpdHksRHJpbmsgVHlwZSxNaWxlc3RvbmUsQ2F0ZWdvcnksTGFiZWwsTm90ZXMsU291cmNlCmRpYXBlciwyMDI2LTA2LTE1VDA5OjQwOjAwLTA0OjAwLDIwMjYtMDYtMTUsOTo0MCBBTSwsLCwsLGRpcnR5LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxEdXJhdGlvbjogYmxhY2ssaW1wb3J0CmJyZWFzdCwyMDI2LTA2LTE1VDA5OjQzOjAwLTA0OjAwLDIwMjYtMDYtMTUsOTo0MyBBTSwyMDI2LTA2LTE1VDA5OjU4OjAwLTA0OjAwLDE0LCwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxpbXBvcnQKYnJlYXN0LDIwMjYtMDYtMTVUMTQ6NTA6MDAtMDQ6MDAsMjAyNi0wNi0xNSwyOjUwIFBNLDIwMjYtMDYtMTVUMTU6MDk6MDAtMDQ6MDAsMTgsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLGltcG9ydApicmVhc3QsMjAyNi0wNi0xNVQxNzozMDowMC0wNDowMCwyMDI2LTA2LTE1LDU6MzAgUE0sMjAyNi0wNi0xNVQxNzo1MDowMC0wNDowMCwxOSwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsaW1wb3J0CmRpYXBlciwyMDI2LTA2LTE1VDE4OjEwOjAwLTA0OjAwLDIwMjYtMDYtMTUsNjoxMCBQTSwsLCwsLGRpcnR5LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxEdXJhdGlvbjogYmxhY2ssaW1wb3J0CmJyZWFzdCwyMDI2LTA2LTE1VDIxOjQwOjAwLTA0OjAwLDIwMjYtMDYtMTUsOTo0MCBQTSwyMDI2LTA2LTE1VDIyOjAxOjAwLTA0OjAwLDIxLCwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxpbXBvcnQKYnJlYXN0LDIwMjYtMDYtMTZUMDI6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xNiwyOjAwIEFNLDIwMjYtMDYtMTZUMDI6Mjg6MDAtMDQ6MDAsMjgsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLGltcG9ydApkaWFwZXIsMjAyNi0wNi0xNlQwMjoyODowMC0wNDowMCwyMDI2LTA2LTE2LDI6MjggQU0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsRHVyYXRpb246IGJsYWNrLGltcG9ydApwdW1wLDIwMjYtMDYtMTZUMDU6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xNiw1OjMwIEFNLCwsMTUsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYnJlYXN0LDIwMjYtMDYtMTZUMDg6MzU6MDAtMDQ6MDAsMjAyNi0wNi0xNiw4OjM1IEFNLDIwMjYtMDYtMTZUMDk6MDQ6MDAtMDQ6MDAsMjgsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLGltcG9ydApkaWFwZXIsMjAyNi0wNi0xNlQwODo0NTowMC0wNDowMCwyMDI2LTA2LTE2LDg6NDUgQU0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsRHVyYXRpb246IGJsYWNrLGltcG9ydApkaWFwZXIsMjAyNi0wNi0xNlQwODo0NjowMC0wNDowMCwyMDI2LTA2LTE2LDg6NDYgQU0sLCwsLCx3ZXQsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxpbXBvcnQKcHVtcCwyMDI2LTA2LTE2VDA5OjAwOjAwLTA0OjAwLDIwMjYtMDYtMTYsOTowMCBBTSwsLDE3LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTE2VDA5OjAwOjAwLTA0OjAwLDIwMjYtMDYtMTYsOTowMCBBTSwsLDE1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTE2VDEyOjAwOjAwLTA0OjAwLDIwMjYtMDYtMTYsMTI6MDAgUE0sLCwxNyxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApkaWFwZXIsMjAyNi0wNi0xNlQxNDoxOTowMC0wNDowMCwyMDI2LTA2LTE2LDI6MTkgUE0sLCwsLCx3ZXQsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxpbXBvcnQKYm90dGxlLDIwMjYtMDYtMTZUMTU6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xNiwzOjAwIFBNLCwsMjAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTE2VDIwOjAwOjAwLTA0OjAwLDIwMjYtMDYtMTYsODowMCBQTSwsLDUwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpwdW1wLDIwMjYtMDYtMTZUMjE6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xNiw5OjMwIFBNLCwsMjYsbWwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpwdW1wLDIwMjYtMDYtMTdUMDU6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xNyw1OjMwIEFNLCwsNTUsbWwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJyZWFzdCwyMDI2LTA2LTE3VDA4OjAwOjAwLTA0OjAwLDIwMjYtMDYtMTcsODowMCBBTSwsMjAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0xN1QwODoyMDowMC0wNDowMCwyMDI2LTA2LTE3LDg6MjAgQU0sLCwzNSxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApicmVhc3QsMjAyNi0wNi0xN1QxMTowMDowMC0wNDowMCwyMDI2LTA2LTE3LDExOjAwIEFNLCwyMCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CnB1bXAsMjAyNi0wNi0xN1QxMToxNTowMC0wNDowMCwyMDI2LTA2LTE3LDExOjE1IEFNLCwsMzIsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKZGlhcGVyLDIwMjYtMDYtMTdUMTE6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xNywxMTozMCBBTSwsLCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTE3VDExOjMwOjAwLTA0OjAwLDIwMjYtMDYtMTcsMTE6MzAgQU0sLCwyMC4wLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTE3VDEzOjM1OjAwLTA0OjAwLDIwMjYtMDYtMTcsMTozNSBQTSwsLCwsLGJvdGgsZmFsc2UsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKZGlhcGVyLDIwMjYtMDYtMTdUMTM6NTI6MDAtMDQ6MDAsMjAyNi0wNi0xNywxOjUyIFBNLCwsLCwsZGlydHksLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CnN5bXB0b20sMjAyNi0wNi0xN1QxNDowMDowMC0wNDowMCwyMDI2LTA2LTE3LDI6MDAgUE0sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHNwaXQgdXAsdGV4dApkaWFwZXIsMjAyNi0wNi0xN1QxNDowMDowMC0wNDowMCwyMDI2LTA2LTE3LDI6MDAgUE0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0xN1QxNDowMDowMC0wNDowMCwyMDI2LTA2LTE3LDI6MDAgUE0sLCwyNyxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApicmVhc3QsMjAyNi0wNi0xN1QxNDowMDowMC0wNDowMCwyMDI2LTA2LTE3LDI6MDAgUE0sLDIwLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYnJlYXN0LDIwMjYtMDYtMTdUMTc6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xNyw1OjAwIFBNLCwzMCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTE3VDE3OjMwOjAwLTA0OjAwLDIwMjYtMDYtMTcsNTozMCBQTSwsLDEyLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTE3VDE3OjMwOjAwLTA0OjAwLDIwMjYtMDYtMTcsNTozMCBQTSwsLCwsLGRpcnR5LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApwdW1wLDIwMjYtMDYtMTdUMTg6MTI6MzMtMDQ6MDAsMjAyNi0wNi0xNyw2OjEyIFBNLCwsMzMsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMTdUMTk6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xNyw3OjMwIFBNLCwsMzMsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYnJlYXN0LDIwMjYtMDYtMTdUMTk6NTA6MDAtMDQ6MDAsMjAyNi0wNi0xNyw3OjUwIFBNLDIwMjYtMDYtMTdUMjA6MDU6MDAtMDQ6MDAsMTUsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApkaWFwZXIsMjAyNi0wNi0xN1QyMDowMDowMC0wNDowMCwyMDI2LTA2LTE3LDg6MDAgUE0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKcHVtcCwyMDI2LTA2LTE3VDIwOjQ1OjAwLTA0OjAwLDIwMjYtMDYtMTcsODo0NSBQTSwsLDQzLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTE3VDIxOjU5OjAwLTA0OjAwLDIwMjYtMDYtMTcsOTo1OSBQTSwsLCwsLHdldCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTE3VDIyOjAwOjAwLTA0OjAwLDIwMjYtMDYtMTcsMTA6MDAgUE0sLCwzMyxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApicmVhc3QsMjAyNi0wNi0xN1QyMjowMDowMC0wNDowMCwyMDI2LTA2LTE3LDEwOjAwIFBNLCwxMCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHByb2JhYmx5IDEwIG1pbnMgb2YgYnJlYXN0ZmVlZGluZyB0b28sdGV4dApkaWFwZXIsMjAyNi0wNi0xOFQwMDoyNzowMC0wNDowMCwyMDI2LTA2LTE4LDEyOjI3IEFNLCwsLCwsd2V0LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApkaWFwZXIsMjAyNi0wNi0xOFQwMTowMDowMC0wNDowMCwyMDI2LTA2LTE4LDE6MDAgQU0sLCwsLCx3ZXQsZmFsc2UsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYnJlYXN0LDIwMjYtMDYtMThUMDE6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xOCwxOjAwIEFNLDIwMjYtMDYtMThUMDE6MjA6MDAtMDQ6MDAsMjAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0xOFQwMTowMDowMC0wNDowMCwyMDI2LTA2LTE4LDE6MDAgQU0sLCwzOC4wLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLDMwIHRoZW4gOCAtIGdvdCB2ZXJ5IGZ1c3N5IGF0IDI6MzBhIGFuZCB3YW50ZWQgdGhlIGJvdHRsZSx0ZXh0CmJyZWFzdCwyMDI2LTA2LTE4VDAzOjAwOjAwLTA0OjAwLDIwMjYtMDYtMTgsMzowMCBBTSwsMTUsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKcHVtcCwyMDI2LTA2LTE4VDAzOjE1OjAwLTA0OjAwLDIwMjYtMDYtMTgsMzoxNSBBTSwsLDIwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpib3R0bGUsMjAyNi0wNi0xOFQwMzozMDowMC0wNDowMCwyMDI2LTA2LTE4LDM6MzAgQU0sLCwxMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0xOFQwNDowMDowMC0wNDowMCwyMDI2LTA2LTE4LDQ6MDAgQU0sLCwxMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKZGlhcGVyLDIwMjYtMDYtMThUMDU6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xOCw1OjAwIEFNLCwsLCwsZGlydHksLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CnB1bXAsMjAyNi0wNi0xOFQwNTozMDowMC0wNDowMCwyMDI2LTA2LTE4LDU6MzAgQU0sLCwzNyxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0xOFQwNTozMDowMC0wNDowMCwyMDI2LTA2LTE4LDU6MzAgQU0sLCwzMixtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApkaWFwZXIsMjAyNi0wNi0xOFQwNzowMDowMC0wNDowMCwyMDI2LTA2LTE4LDc6MDAgQU0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApib3R0bGUsMjAyNi0wNi0xOFQwNzowMDowMC0wNDowMCwyMDI2LTA2LTE4LDc6MDAgQU0sLCwyMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKcHVtcCwyMDI2LTA2LTE4VDExOjM1OjI1LTA0OjAwLDIwMjYtMDYtMTgsMTE6MzUgQU0sLCw2MCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKcHVtcCwyMDI2LTA2LTE4VDE1OjAwOjAwLTA0OjAwLDIwMjYtMDYtMTgsMzowMCBQTSwsLDMwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTE4VDE1OjMwOjAwLTA0OjAwLDIwMjYtMDYtMTgsMzozMCBQTSwsLDQwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpkaWFwZXIsMjAyNi0wNi0xOFQxNTozMDowMC0wNDowMCwyMDI2LTA2LTE4LDM6MzAgUE0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCnB1bXAsMjAyNi0wNi0xOFQxNjozMDowMC0wNDowMCwyMDI2LTA2LTE4LDQ6MzAgUE0sLCwyNSxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKYm90dGxlLDIwMjYtMDYtMThUMTc6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xOCw1OjAwIFBNLCwsMzAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKcHVtcCwyMDI2LTA2LTE4VDE3OjAwOjAwLTA0OjAwLDIwMjYtMDYtMTgsNTowMCBQTSwsLDMwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTE4VDE3OjMwOjAwLTA0OjAwLDIwMjYtMDYtMTgsNTozMCBQTSwsLDI1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpkaWFwZXIsMjAyNi0wNi0xOFQxOTowMDowMC0wNDowMCwyMDI2LTA2LTE4LDc6MDAgUE0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMThUMjA6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xOCw4OjAwIFBNLCwsMzAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMThUMjE6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xOCw5OjMwIFBNLCwsMTAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKZGlhcGVyLDIwMjYtMDYtMThUMjM6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xOCwxMTowMCBQTSwsLCwsLHdldCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMThUMjM6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xOCwxMTozMCBQTSwsLDMwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJyZWFzdCwyMDI2LTA2LTE4VDIzOjM2OjIwLTA0OjAwLDIwMjYtMDYtMTgsMTE6MzYgUE0sMjAyNi0wNi0xOVQwMDowMToyMC0wNDowMCwyNSwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApwdW1wLDIwMjYtMDYtMTlUMDA6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xOSwxMjowMCBBTSwsLDYwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTE5VDAwOjMwOjAwLTA0OjAwLDIwMjYtMDYtMTksMTI6MzAgQU0sLCwzMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0xOVQwMToxNTowMC0wNDowMCwyMDI2LTA2LTE5LDE6MTUgQU0sLCwzMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApkaWFwZXIsMjAyNi0wNi0xOVQwMTo1NToyMC0wNDowMCwyMDI2LTA2LTE5LDE6NTUgQU0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApib3R0bGUsMjAyNi0wNi0xOVQwNTozMDowMC0wNDowMCwyMDI2LTA2LTE5LDU6MzAgQU0sLCwxMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKcHVtcCwyMDI2LTA2LTE5VDA2OjA4OjEwLTA0OjAwLDIwMjYtMDYtMTksNjowOCBBTSwsLDYwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpkaWFwZXIsMjAyNi0wNi0xOVQwNjoxNTowMC0wNDowMCwyMDI2LTA2LTE5LDY6MTUgQU0sLCwsLCx3ZXQsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpib3R0bGUsMjAyNi0wNi0xOVQwNjozMDowMC0wNDowMCwyMDI2LTA2LTE5LDY6MzAgQU0sLCwyMixtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKZGlhcGVyLDIwMjYtMDYtMTlUMDk6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xOSw5OjAwIEFNLCwsLCwsZGlydHksLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CnB1bXAsMjAyNi0wNi0xOVQwOTowMDowMC0wNDowMCwyMDI2LTA2LTE5LDk6MDAgQU0sLCwxMjAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMTlUMDk6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xOSw5OjMwIEFNLCwsMjAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYnJlYXN0LDIwMjYtMDYtMTlUMDk6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xOSw5OjMwIEFNLCwyMCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJyZWFzdCwyMDI2LTA2LTE5VDExOjAwOjAwLTA0OjAwLDIwMjYtMDYtMTksMTE6MDAgQU0sMjAyNi0wNi0xOVQxMToyMDowMC0wNDowMCwyMCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0xOVQxMTo1OTo1My0wNDowMCwyMDI2LTA2LTE5LDExOjU5IEFNLCwsMjAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsVGhyZXcgdXAgQSBsb3QsdGV4dApicmVhc3QsMjAyNi0wNi0xOVQxMzowMDowMC0wNDowMCwyMDI2LTA2LTE5LDE6MDAgUE0sLDIwLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYnJlYXN0LDIwMjYtMDYtMTlUMTU6MzA6MDAtMDQ6MDAsMjAyNi0wNi0xOSwzOjMwIFBNLCwyNSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTE5VDE3OjAwOjAwLTA0OjAwLDIwMjYtMDYtMTksNTowMCBQTSwsLCwsLHdldCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApicmVhc3QsMjAyNi0wNi0xOVQxNzozMDowMC0wNDowMCwyMDI2LTA2LTE5LDU6MzAgUE0sMjAyNi0wNi0xOVQxODowMDowMC0wNDowMCwzMCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLDMwIG1pbnMgb2YgYnJlYXN0ZmVlZGluZyBhdCA1OjMwcCx0ZXh0CmJyZWFzdCwyMDI2LTA2LTE5VDE5OjE1OjAwLTA0OjAwLDIwMjYtMDYtMTksNzoxNSBQTSwsMzAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0xOVQyMTowMDowMC0wNDowMCwyMDI2LTA2LTE5LDk6MDAgUE0sLCwzNS4wLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTE5VDIxOjAwOjAwLTA0OjAwLDIwMjYtMDYtMTksOTowMCBQTSwsLCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCJNb3N0bHkgd2V0LCBsaXR0bGUgcG9vcCIsdGV4dApicmVhc3QsMjAyNi0wNi0xOVQyMzowMDowMC0wNDowMCwyMDI2LTA2LTE5LDExOjAwIFBNLDIwMjYtMDYtMTlUMjM6MTA6MDAtMDQ6MDAsMTAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKZGlhcGVyLDIwMjYtMDYtMTlUMjM6MDA6MDAtMDQ6MDAsMjAyNi0wNi0xOSwxMTowMCBQTSwsLCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpib3R0bGUsMjAyNi0wNi0yMFQwMDowMDowMC0wNDowMCwyMDI2LTA2LTIwLDEyOjAwIEFNLCwsMzUsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYnJlYXN0LDIwMjYtMDYtMjBUMDE6MjA6MDAtMDQ6MDAsMjAyNi0wNi0yMCwxOjIwIEFNLDIwMjYtMDYtMjBUMDE6NDA6MDAtMDQ6MDAsMjAsLCxsZWZ0LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKZGlhcGVyLDIwMjYtMDYtMjBUMDE6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMCwxOjQ1IEFNLCwsLCwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsTWl4ZWQgZGlhcGVyLHRleHQKYnJlYXN0LDIwMjYtMDYtMjBUMDE6NTU6MDAtMDQ6MDAsMjAyNi0wNi0yMCwxOjU1IEFNLDIwMjYtMDYtMjBUMDI6MTU6MDAtMDQ6MDAsMjAsLCxyaWdodCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTIwVDAyOjQ1OjAwLTA0OjAwLDIwMjYtMDYtMjAsMjo0NSBBTSwsLDIwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTIwVDAzOjEyOjM1LTA0OjAwLDIwMjYtMDYtMjAsMzoxMiBBTSwsLCwsLHdldCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYnJlYXN0LDIwMjYtMDYtMjBUMDM6MzA6NTYtMDQ6MDAsMjAyNi0wNi0yMCwzOjMwIEFNLDIwMjYtMDYtMjBUMDM6NDU6NTYtMDQ6MDAsMTUsLCxsZWZ0LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApkaWFwZXIsMjAyNi0wNi0yMFQwNDoxNTowMC0wNDowMCwyMDI2LTA2LTIwLDQ6MTUgQU0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApib3R0bGUsMjAyNi0wNi0yMFQwNDo0NTowMC0wNDowMCwyMDI2LTA2LTIwLDQ6NDUgQU0sLCwyNSxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApkaWFwZXIsMjAyNi0wNi0yMFQwNzowMDowMC0wNDowMCwyMDI2LTA2LTIwLDc6MDAgQU0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKYm90dGxlLDIwMjYtMDYtMjBUMDc6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMCw3OjQ1IEFNLCwsMzUuMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKYm90dGxlLDIwMjYtMDYtMjBUMTA6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMCwxMDozMCBBTSwsLDMwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTIwVDEwOjMwOjAwLTA0OjAwLDIwMjYtMDYtMjAsMTA6MzAgQU0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMFQxMTo0NTowMC0wNDowMCwyMDI2LTA2LTIwLDExOjQ1IEFNLCwsMzUuMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApkaWFwZXIsMjAyNi0wNi0yMFQxMjo0MzoyNS0wNDowMCwyMDI2LTA2LTIwLDEyOjQzIFBNLCwsLCwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsTWl4ZWQgZGlhcGVyIGF0IDExOjMwcCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTIwVDE0OjE1OjAwLTA0OjAwLDIwMjYtMDYtMjAsMjoxNSBQTSwsLDI4LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTIwVDE2OjAwOjAwLTA0OjAwLDIwMjYtMDYtMjAsNDowMCBQTSwsLDIwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTIwVDE2OjAwOjAwLTA0OjAwLDIwMjYtMDYtMjAsNDowMCBQTSwsLCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTIwVDE3OjE1OjAwLTA0OjAwLDIwMjYtMDYtMjAsNToxNSBQTSwsLDI1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTIwVDE4OjAwOjAwLTA0OjAwLDIwMjYtMDYtMjAsNjowMCBQTSwsLDI1LjAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApkaWFwZXIsMjAyNi0wNi0yMFQxODo0NTowMC0wNDowMCwyMDI2LTA2LTIwLDY6NDUgUE0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMFQxOTowMDowMC0wNDowMCwyMDI2LTA2LTIwLDc6MDAgUE0sLCwyMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMFQyMDowMDowMC0wNDowMCwyMDI2LTA2LTIwLDg6MDAgUE0sLCwyOCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKZGlhcGVyLDIwMjYtMDYtMjBUMjA6NDg6MTEtMDQ6MDAsMjAyNi0wNi0yMCw4OjQ4IFBNLCwsLCwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTIwVDIxOjE1OjAwLTA0OjAwLDIwMjYtMDYtMjAsOToxNSBQTSwsLDEwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpib3R0bGUsMjAyNi0wNi0yMFQyMjo0NTowMC0wNDowMCwyMDI2LTA2LTIwLDEwOjQ1IFBNLCwsMjMuMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKZGlhcGVyLDIwMjYtMDYtMjBUMjI6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMCwxMDo0NSBQTSwsLCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpkaWFwZXIsMjAyNi0wNi0yMFQyMzowMDowMC0wNDowMCwyMDI2LTA2LTIwLDExOjAwIFBNLCwsLCwsZGlydHksLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTIwVDIzOjI1OjAwLTA0OjAwLDIwMjYtMDYtMjAsMTE6MjUgUE0sLCwxMixtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKYm90dGxlLDIwMjYtMDYtMjFUMDA6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMSwxMjo0NSBBTSwsLDQ1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpkaWFwZXIsMjAyNi0wNi0yMVQwMTowMDowMC0wNDowMCwyMDI2LTA2LTIxLDE6MDAgQU0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMVQwMjowMDowMC0wNDowMCwyMDI2LTA2LTIxLDI6MDAgQU0sLCwyMi4wLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTIxVDAyOjE1OjAwLTA0OjAwLDIwMjYtMDYtMjEsMjoxNSBBTSwsLCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLE1peGVkIGRpYXBlciBhdCAyMTVhLHRleHQKYm90dGxlLDIwMjYtMDYtMjFUMDI6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMSwyOjQ1IEFNLCwsMjMuMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMVQwNDowMDowMC0wNDowMCwyMDI2LTA2LTIxLDQ6MDAgQU0sLCwzMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKZGlhcGVyLDIwMjYtMDYtMjFUMDU6MjU6MDAtMDQ6MDAsMjAyNi0wNi0yMSw1OjI1IEFNLCwsLCwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApib3R0bGUsMjAyNi0wNi0yMVQwNTozMDowMC0wNDowMCwyMDI2LTA2LTIxLDU6MzAgQU0sLCwyNS4wLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxtYW51YWwKYm90dGxlLDIwMjYtMDYtMjFUMDY6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMSw2OjMwIEFNLCwsMTIsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMjFUMDc6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMSw3OjMwIEFNLCwsMTAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmRpYXBlciwyMDI2LTA2LTIxVDA3OjMwOjAwLTA0OjAwLDIwMjYtMDYtMjEsNzozMCBBTSwsLCwsLHdldCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTIxVDA4OjMwOjAwLTA0OjAwLDIwMjYtMDYtMjEsODozMCBBTSwsLDMwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpkaWFwZXIsMjAyNi0wNi0yMVQwOTo0NTowMC0wNDowMCwyMDI2LTA2LTIxLDk6NDUgQU0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKYm90dGxlLDIwMjYtMDYtMjFUMTA6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMSwxMDo0NSBBTSwsLDI1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpib3R0bGUsMjAyNi0wNi0yMVQxMTo0NTowMC0wNDowMCwyMDI2LTA2LTIxLDExOjQ1IEFNLCwsMjUsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmRpYXBlciwyMDI2LTA2LTIxVDEyOjI0OjQzLTA0OjAwLDIwMjYtMDYtMjEsMTI6MjQgUE0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsbWFudWFsCmRpYXBlciwyMDI2LTA2LTIxVDEzOjMwOjAwLTA0OjAwLDIwMjYtMDYtMjEsMTozMCBQTSwsLCwsLHdldCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTIxVDEzOjQ1OjAwLTA0OjAwLDIwMjYtMDYtMjEsMTo0NSBQTSwsLDM4LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpkaWFwZXIsMjAyNi0wNi0yMVQxNDowMDowMC0wNDowMCwyMDI2LTA2LTIxLDI6MDAgUE0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTIxVDE0OjMwOjAwLTA0OjAwLDIwMjYtMDYtMjEsMjozMCBQTSwsLDEyLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTIxVDE1OjQ1OjAwLTA0OjAwLDIwMjYtMDYtMjEsMzo0NSBQTSwsLDMwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpib3R0bGUsMjAyNi0wNi0yMVQxNzowMDowMC0wNDowMCwyMDI2LTA2LTIxLDU6MDAgUE0sLCwxMixtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApkaWFwZXIsMjAyNi0wNi0yMVQxNzo0NTowMC0wNDowMCwyMDI2LTA2LTIxLDU6NDUgUE0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMjFUMTk6MTU6MDAtMDQ6MDAsMjAyNi0wNi0yMSw3OjE1IFBNLCwsNjAuMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxUaHJldyB1cCByaWdodCBhZnRlciAtIHNtYWxsIGFtb3VudCBzbyBvdmVyIGZlZCBieSBhIGJpdCAsbWFudWFsCmRpYXBlciwyMDI2LTA2LTIxVDE5OjU2OjQ3LTA0OjAwLDIwMjYtMDYtMjEsNzo1NiBQTSwsLCwsLGRpcnR5LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsbWFudWFsCmJvdHRsZSwyMDI2LTA2LTIxVDIwOjMwOjAwLTA0OjAwLDIwMjYtMDYtMjEsODozMCBQTSwsLDIyLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxtYW51YWwKZGlhcGVyLDIwMjYtMDYtMjFUMjA6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMSw4OjMwIFBNLCwsLCwsd2V0LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsbWFudWFsCmJvdHRsZSwyMDI2LTA2LTIxVDIxOjE1OjAwLTA0OjAwLDIwMjYtMDYtMjEsOToxNSBQTSwsLDE1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmJvdHRsZSwyMDI2LTA2LTIxVDIxOjMzOjM2LTA0OjAwLDIwMjYtMDYtMjEsOTozMyBQTSwsLDIwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLFNoZSdzIG9uIGZpcmUgdG9uaWdodCEgLG1hbnVhbApib3R0bGUsMjAyNi0wNi0yMVQyMjozMDowMC0wNDowMCwyMDI2LTA2LTIxLDEwOjMwIFBNLCwsMjIsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKZGlhcGVyLDIwMjYtMDYtMjFUMjI6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMSwxMDozMCBQTSwsLCwsLHdldCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMjJUMDA6MDM6MjctMDQ6MDAsMjAyNi0wNi0yMiwxMjowMyBBTSwsLDI4LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx0ZXh0CmRpYXBlciwyMDI2LTA2LTIyVDAwOjAzOjQ0LTA0OjAwLDIwMjYtMDYtMjIsMTI6MDMgQU0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsbWFudWFsCmJvdHRsZSwyMDI2LTA2LTIyVDAxOjA5OjQyLTA0OjAwLDIwMjYtMDYtMjIsMTowOSBBTSwsLDUwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLFdvYWghIE1LIG5ldyByZWNvcmQgLG1hbnVhbApkaWFwZXIsMjAyNi0wNi0yMlQwMTo0NTowMC0wNDowMCwyMDI2LTA2LTIyLDE6NDUgQU0sLCwsLCxkaXJ0eSwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMjJUMDE6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMiwxOjQ1IEFNLCwsMzAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMjJUMDQ6MDA6MDAtMDQ6MDAsMjAyNi0wNi0yMiw0OjAwIEFNLCwsMzAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTIyVDA0OjMwOjAwLTA0OjAwLDIwMjYtMDYtMjIsNDozMCBBTSwsLDMwLG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpkaWFwZXIsMjAyNi0wNi0yMlQwNTo0NTowMC0wNDowMCwyMDI2LTA2LTIyLDU6NDUgQU0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKYm90dGxlLDIwMjYtMDYtMjJUMDU6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMiw1OjQ1IEFNLCwsMjUsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTIyVDA2OjQ1OjAwLTA0OjAwLDIwMjYtMDYtMjIsNjo0NSBBTSwsLDE1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCx2b2ljZQpib3R0bGUsMjAyNi0wNi0yMlQwODo0NTowMC0wNDowMCwyMDI2LTA2LTIyLDg6NDUgQU0sLCwzMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApkaWFwZXIsMjAyNi0wNi0yMlQwODo0NTowMC0wNDowMCwyMDI2LTA2LTIyLDg6NDUgQU0sLCwsLCxib3RoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMlQxMDozMDowMC0wNDowMCwyMDI2LTA2LTIyLDEwOjMwIEFNLCwsMzMsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKZGlhcGVyLDIwMjYtMDYtMjJUMTI6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMiwxMjozMCBQTSwsLCwsLHdldCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHZvaWNlCmJvdHRsZSwyMDI2LTA2LTIyVDEyOjMwOjAwLTA0OjAwLDIwMjYtMDYtMjIsMTI6MzAgUE0sLCwyNSxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdm9pY2UKZGlhcGVyLDIwMjYtMDYtMjJUMTI6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMiwxMjo0NSBQTSwsLCwsLGRpcnR5LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMlQxMjo0NTowMC0wNDowMCwyMDI2LTA2LTIyLDEyOjQ1IFBNLCwsMjUsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKZGlhcGVyLDIwMjYtMDYtMjJUMTQ6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMiwyOjMwIFBNLCwsLCwsd2V0LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMlQxNDo0NTowMC0wNDowMCwyMDI2LTA2LTIyLDI6NDUgUE0sLCwyNSxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApib3R0bGUsMjAyNi0wNi0yMlQxNzoxNTowMC0wNDowMCwyMDI2LTA2LTIyLDU6MTUgUE0sLCwzNSxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwscm9iaW4KZGlhcGVyLDIwMjYtMDYtMjJUMTc6MTU6MDAtMDQ6MDAsMjAyNi0wNi0yMiw1OjE1IFBNLCwsLCwsd2V0LCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwscm9iaW4KYm90dGxlLDIwMjYtMDYtMjJUMTg6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMiw2OjMwIFBNLCwsMzAuMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwscm9iaW4KYm90dGxlLDIwMjYtMDYtMjJUMjA6MTU6MDAtMDQ6MDAsMjAyNi0wNi0yMiw4OjE1IFBNLCwsMTUsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHJvYmluCmRpYXBlciwyMDI2LTA2LTIyVDIwOjQ1OjAwLTA0OjAwLDIwMjYtMDYtMjIsODo0NSBQTSwsLCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxyb2Jpbgpib3R0bGUsMjAyNi0wNi0yMlQyMToxNTowMC0wNDowMCwyMDI2LTA2LTIyLDk6MTUgUE0sLCwyMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwscm9iaW4KYm90dGxlLDIwMjYtMDYtMjJUMjI6MDA6MDAtMDQ6MDAsMjAyNi0wNi0yMiwxMDowMCBQTSwsLDM1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxyb2JpbgpkaWFwZXIsMjAyNi0wNi0yMlQyMjozMDowMC0wNDowMCwyMDI2LTA2LTIyLDEwOjMwIFBNLCwsLCwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHJvYmluCmJvdHRsZSwyMDI2LTA2LTIyVDIyOjQ1OjAwLTA0OjAwLDIwMjYtMDYtMjIsMTA6NDUgUE0sLCwxMCxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwscm9iaW4KZGlhcGVyLDIwMjYtMDYtMjJUMjM6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMiwxMTozMCBQTSwsLCwsLGJvdGgsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxyb2Jpbgpib3R0bGUsMjAyNi0wNi0yM1QwMDowMDo0NC0wNDowMCwyMDI2LTA2LTIzLDEyOjAwIEFNLCwsMzAsbWwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLHRleHQKYm90dGxlLDIwMjYtMDYtMjNUMDA6NDU6MDAtMDQ6MDAsMjAyNi0wNi0yMywxMjo0NSBBTSwsLDM1LG1sLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCJTcGl0IHVwIC0gY290dGFnZSBjaGVlc2UgY29uc2lzdGVuY3kKIixyb2Jpbgpib3R0bGUsMjAyNi0wNi0yM1QwMTowMDowMC0wNDowMCwyMDI2LTA2LTIzLDE6MDAgQU0sLCwxNSxtbCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsdGV4dApicmVhc3QsMjAyNi0wNi0yM1QwMToxNjowMC0wNDowMCwyMDI2LTA2LTIzLDE6MTYgQU0sMjAyNi0wNi0yM1QwMToyMjowMC0wNDowMCw2LCwsbGVmdCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxtYW51YWwKZGlhcGVyLDIwMjYtMDYtMjNUMDE6MzA6MDAtMDQ6MDAsMjAyNi0wNi0yMywxOjMwIEFNLCwsLCwsYm90aCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLG1hbnVhbApicmVhc3QsMjAyNi0wNi0yM1QwMTozODowMC0wNDowMCwyMDI2LTA2LTIzLDE6MzggQU0sMjAyNi0wNi0yM1QwMTo0NjowMC0wNDowMCw4LCwscmlnaHQsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsbWFudWFs";
+const STORE_KEY="vienna-feeding-csv-v2";
+const BREAST_ML_PER_MIN=1; // stated assumption until weighed feeds begin
+const BLOCKS=[
+  {t:"12–4a",s:0,e:4},{t:"4–8a",s:4,e:8},{t:"8a–12p",s:8,e:12},
+  {t:"12–4p",s:12,e:16},{t:"4–8p",s:16,e:20},{t:"8p–12a",s:20,e:24}
+];
+const $=id=>document.getElementById(id);
+const r0=n=>Math.round(n), r1=n=>Math.round(n*10)/10;
+let DATA=null, DAYS=[], sel=0, latestDay=null, latestHour=null;
+
+function blank(){return{bml:0,bmin:0,feeds:0,bfeeds:0,breast:0,pump:0,wet:0,dirty:0,changes:0};}
+function est(c){return c.bml + c.bmin*BREAST_ML_PER_MIN;}
+
+function parseCSV(text){
+  const res=Papa.parse(text.trim(),{header:true,skipEmptyLines:true});
+  const ev=[];
+  for(const row of res.data){
+    const t=(row.Type||"").trim(), ts=(row.Timestamp||"").trim(), day=(row.Date||"").trim();
+    if(!t||ts.length<13||day.length<10) continue;
+    const amt=parseFloat(row.Amount);
+    ev.push({t,day,hour:parseInt(ts.substr(11,2),10),ts,amt:isNaN(amt)?null:amt,
+      diaper:(row["Diaper Type"]||"").trim(),dur:parseFloat(row["Duration (min)"])||0,
+      weight:parseFloat(row.Weight),wunit:(row["Weight Unit"]||"").trim()});
+  }
+  if(!ev.length) throw new Error("no rows");
+  return ev;
+}
+function build(ev){
+  const byDay={}; let maxTs="";
+  for(const e of ev){
+    if(e.ts>maxTs)maxTs=e.ts;
+    if(!byDay[e.day])byDay[e.day]=BLOCKS.map(()=>blank());
+    let bi=BLOCKS.findIndex(b=>e.hour>=b.s&&e.hour<b.e); if(bi<0)bi=0;
+    const c=byDay[e.day][bi];
+    if(e.t==="bottle"&&e.amt!=null){c.bml+=e.amt;c.bfeeds++;c.feeds++;}
+    else if(e.t==="breast"){c.breast++;c.feeds++;c.bmin+=e.dur;}
+    else if(e.t==="pump"&&e.amt!=null){c.pump+=e.amt;}
+    else if(e.t==="diaper"){c.changes++;if(e.diaper==="wet"||e.diaper==="both")c.wet++;if(e.diaper==="dirty"||e.diaper==="both")c.dirty++;}
+  }
+  DATA={byDay,ev,maxTs};
+  DAYS=Object.keys(byDay).sort();
+  latestDay=DAYS[DAYS.length-1]; latestHour=parseInt(maxTs.substr(11,2),10);
+  sel=DAYS.length-1;
+}
+const isPartial=d=>d===latestDay;
+function totals(day){const t=blank();DATA.byDay[day].forEach(c=>{for(const k in t)t[k]+=c[k];});return t;}
+function dayEst(day){return est(totals(day));}
+function priorDay(day){const i=DAYS.indexOf(day);return i>0?DAYS[i-1]:null;}
+// 3 most recent COMPLETE days with date <= day (excludes partial latest)
+function avgBaseDays(day){
+  const idx=DAYS.indexOf(day);
+  const out=[];
+  for(let j=idx;j>=0&&out.length<3;j--){const d=DAYS[j];if(isPartial(d))continue;out.push(d);}
+  return out;
+}
+function avgBlocks(days){
+  const seg=BLOCKS.map(()=>blank());
+  days.forEach(d=>DATA.byDay[d].forEach((c,i)=>{for(const k in c)seg[i][k]+=c[k];}));
+  const n=days.length||1; seg.forEach(c=>{for(const k in c)c[k]/=n;});
+  const tot=blank(); seg.forEach(c=>{for(const k in tot)tot[k]+=c[k];});
+  return{seg,tot};
+}
+function estThroughHour(day,H){let ml=0,feeds=0;for(const e of DATA.ev){if(e.day===day&&e.hour<=H){if(e.t==="bottle"&&e.amt!=null){ml+=e.amt;feeds++;}else if(e.t==="breast"){ml+=e.dur*BREAST_ML_PER_MIN;feeds++;}}}return{ml,feeds};}
+function niceScale(max,targetTicks){
+  const t=targetTicks||5;
+  if(max<=0)return{max:1,ticks:[0,1]};
+  const raw=max/t, pow=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,5,10].map(m=>m*pow).find(s=>s>=raw-1e-9)||10*pow;
+  const nmax=Math.ceil(max/step-1e-9)*step, ticks=[];
+  for(let v=0;v<=nmax+1e-9;v+=step)ticks.push(Math.round(v*100)/100);
+  return{max:nmax,ticks};
+}
+function hLbl(H){const ap=H<12?"a":"p";let h=H%12;if(!h)h=12;return h+ap;}
+function tsTime(ts){let h=+ts.substr(11,2);const m=ts.substr(14,2);const ap=h<12?"AM":"PM";h=h%12||12;return h+":"+m+" "+ap;}
+function toGrams(v,u){ // normalize mixed weight units → grams
+  if(isNaN(v))return null;
+  u=(u||"").toLowerCase().trim();
+  if(u.startsWith("lb")||u.startsWith("pound"))return v*453.592;
+  if(u.startsWith("oz")||u.startsWith("ounce"))return v*28.3495;
+  if(u==="kg"||u.startsWith("kilo"))return v*1000;
+  if(u==="g"||u.startsWith("gram"))return v;
+  return v<25?v*453.592:v; // unit missing: their two units are g and lb → infer by magnitude
+}
+function relAge(ms){if(ms==null)return"";const s=Math.max(0,Math.round((Date.now()-ms)/1000));if(s<90)return"just now";const m=Math.round(s/60);if(m<60)return m+" min ago";const h=Math.floor(m/60);if(h<48)return h+(h===1?" hr ago":" hrs ago");return Math.round(h/24)+" days ago";}
+function fmtDay(d){return new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});}
+function ddshort(d){const dt=new Date(d+"T12:00:00");return{w:dt.toLocaleDateString("en-US",{weekday:"narrow"}),n:dt.getDate()};}
+
+/* ---------- charts ---------- */
+function comboChart(el, days, opts){
+  const W=620,H=opts.h||210, padL=38,padR=opts.weight?44:14,padT=16,padB=32;
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const sc=niceScale(Math.max(1,...days.map(d=>d.bml+d.bmin)),5);
+  const slot=iw/days.length, bw=Math.min(34,slot*0.56);
+  let s="";
+  sc.ticks.forEach(v=>{const y=padT+ih-(v/sc.max)*ih;
+    s+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--line2)"/>`;
+    s+=`<text x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9.5" fill="var(--faint)">${v}</text>`;});
+  s+=`<text x="${padL-6}" y="${padT-6}" text-anchor="end" font-size="9" fill="var(--faint)">ml</text>`;
+  days.forEach((d,i)=>{
+    const cx=padL+slot*i+slot/2, x=cx-bw/2, total=d.bml+d.bmin;
+    const hT=(total/sc.max)*ih, hB=(d.bml/sc.max)*ih, yTop=padT+ih-hT;
+    const fill=d.partial?"url(#hatch)":"var(--bottle)";
+    if(d.bmin>0&&!d.partial){
+      s+=`<rect x="${x}" y="${yTop.toFixed(1)}" width="${bw}" height="${(hT-hB).toFixed(1)}" rx="3" fill="var(--breast)"/>`;
+      s+=`<rect x="${x}" y="${(padT+ih-hB).toFixed(1)}" width="${bw}" height="${hB.toFixed(1)}" rx="3" fill="var(--bottle)"/>`;
+    } else s+=`<rect x="${x}" y="${yTop.toFixed(1)}" width="${bw}" height="${Math.max(1,hT).toFixed(1)}" rx="3" fill="${fill}"/>`;
+    s+=`<text x="${cx}" y="${(yTop-4).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink)" font-family="Bricolage Grotesque">${r0(total)}</text>`;
+    if(d.bmin>0&&!d.partial) s+=`<text x="${cx}" y="${(yTop+11).toFixed(1)}" text-anchor="middle" font-size="8" fill="#fff" font-family="Bricolage Grotesque">${r0(d.bml)}</text>`;
+    const dd=ddshort(d.day);
+    s+=`<text x="${cx}" y="${H-13}" text-anchor="middle" font-size="9.5" fill="var(--faint)">${dd.w}</text>`;
+    s+=`<text x="${cx}" y="${H-3}" text-anchor="middle" font-size="9.5" fill="var(--faint)">${dd.n}</text>`;
+  });
+  if(opts.weight){
+    const wpts=days.map((d,i)=>d.weight!=null?{v:d.weight,cx:padL+slot*i+slot/2}:null).filter(Boolean);
+    if(wpts.length){
+      const wv=wpts.map(p=>p.v), wmn=Math.min(...wv), wmx=Math.max(...wv), wr=(wmx-wmn)||1;
+      const ys=v=>padT+ih-((v-wmn)/wr)*ih*0.78-ih*0.11;
+      const path=wpts.map((p,i)=>(i?"L":"M")+p.cx.toFixed(1)+" "+ys(p.v).toFixed(1)).join(" ");
+      s+=`<path d="${path}" fill="none" stroke="var(--weight)" stroke-width="2.5" stroke-linecap="round"/>`;
+      wpts.forEach(p=>{s+=`<circle cx="${p.cx.toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="3.2" fill="var(--weight)"/>`;
+        s+=`<text x="${p.cx.toFixed(1)}" y="${(ys(p.v)-7).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--weight)" font-family="Bricolage Grotesque">${r1(p.v)}</text>`;});
+    } else s+=`<text x="${padL+iw/2}" y="${padT+ih/2}" text-anchor="middle" font-size="11" fill="var(--faint)">Weight line appears here once logged</text>`;
+  }
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}"><defs><pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#cfe3dc"/><rect width="3" height="6" fill="#9cc4ba"/></pattern></defs>${s}</svg>`;
+}
+
+function lineChart(el, series, xlabels, opts){
+  const W=620,H=opts.h||230, padL=38,padR=16,padT=18,padB=30;
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const allv=series.flatMap(se=>se.values.filter(v=>v!=null));
+  const sc=niceScale(Math.max(1,...allv),5);
+  const xat=i=>padL+(i/(xlabels.length-1))*iw, yat=v=>padT+ih-(v/sc.max)*ih;
+  let s="";
+  sc.ticks.forEach(v=>{const y=yat(v);
+    s+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--line2)"/>`;
+    s+=`<text x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9.5" fill="var(--faint)">${v}</text>`;});
+  s+=`<text x="${padL-6}" y="${padT-6}" text-anchor="end" font-size="9" fill="var(--faint)">ml</text>`;
+  xlabels.forEach((lb,i)=>s+=`<text x="${xat(i)}" y="${H-10}" text-anchor="middle" font-size="9.5" fill="var(--faint)">${lb}</text>`);
+  series.forEach(se=>{
+    let d="",started=false;
+    se.values.forEach((v,i)=>{if(v==null){started=false;return;}d+=(started?"L":"M")+xat(i).toFixed(1)+" "+yat(v).toFixed(1)+" ";started=true;});
+    s+=`<path d="${d}" fill="none" stroke="${se.color}" stroke-width="${se.w||2}" ${se.dash?'stroke-dasharray="5 4"':''} stroke-linecap="round" stroke-linejoin="round" opacity="${se.op||1}"/>`;
+    if(se.dots) se.values.forEach((v,i)=>{if(v!=null)s+=`<circle cx="${xat(i).toFixed(1)}" cy="${yat(v).toFixed(1)}" r="${se.w>2?3.4:2.6}" fill="${se.color}"/>`;});
+    if(se.label) se.values.forEach((v,i)=>{if(v!=null){const ly=se.below?yat(v)+13:yat(v)-7;s+=`<text x="${xat(i).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${se.color}" font-family="Bricolage Grotesque">${r0(v)}</text>`;}});
+  });
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}">${s}</svg>`;
+}
+
+function miniBars(el, days, valFn, color){
+  const W=300,H=150,padL=26,padR=6,padT=16,padB=24, iw=W-padL-padR, ih=H-padT-padB;
+  const vals=days.map(valFn), sc=niceScale(Math.max(1,...vals),6);
+  const slot=iw/days.length, bw=Math.min(26,slot*0.56);
+  let s="";
+  sc.ticks.forEach(v=>{const y=padT+ih-(v/sc.max)*ih;
+    s+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--line2)"/>`;
+    s+=`<text x="${padL-5}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--faint)">${v}</text>`;});
+  days.forEach((d,i)=>{const cx=padL+slot*i+slot/2,x=cx-bw/2,h=(vals[i]/sc.max)*ih,y=padT+ih-h;
+    s+=`<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${Math.max(1,h).toFixed(1)}" rx="3" fill="${d.partial?'url(#hatch2)':color}"/>`;
+    s+=`<text x="${cx}" y="${(y-3).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="700" fill="var(--ink)" font-family="Bricolage Grotesque">${r1(vals[i])}</text>`;
+    s+=`<text x="${cx}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--faint)">${ddshort(d.day).n}</text>`;});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}"><defs><pattern id="hatch2" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#cfe3dc"/><rect width="3" height="6" fill="#9cc4ba"/></pattern></defs>${s}</svg>`;
+}
+
+function diaperChart(el, days){
+  const W=620,H=180,padL=28,padR=8,padT=20,padB=28, iw=W-padL-padR, ih=H-padT-padB;
+  const sc=niceScale(Math.max(1,...days.map(d=>d.total)),6);
+  const slot=iw/days.length, bw=Math.min(24,slot*0.5);
+  let s="";
+  sc.ticks.forEach(v=>{const y=padT+ih-(v/sc.max)*ih;
+    s+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--line2)"/>`;
+    s+=`<text x="${padL-5}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--faint)">${v}</text>`;});
+  days.forEach((d,i)=>{const cx=padL+slot*i+slot/2, x=cx-bw/2;
+    const ht=(d.total/sc.max)*ih, hw=(d.wetmixed/sc.max)*ih;
+    s+=`<rect x="${x.toFixed(1)}" y="${(padT+ih-ht).toFixed(1)}" width="${bw}" height="${Math.max(1,ht).toFixed(1)}" rx="3" fill="#DCE4EA"/>`;
+    s+=`<rect x="${x.toFixed(1)}" y="${(padT+ih-hw).toFixed(1)}" width="${bw}" height="${Math.max(1,hw).toFixed(1)}" rx="3" fill="var(--cool)"/>`;
+    s+=`<text x="${cx}" y="${(padT+ih-ht-4).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="700" fill="var(--ink)" font-family="Bricolage Grotesque">${d.total}</text>`;
+    if(hw>16) s+=`<text x="${cx}" y="${(padT+ih-7).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" font-family="Bricolage Grotesque">${d.wetmixed}</text>`;
+    else s+=`<text x="${cx}" y="${(padT+ih-hw-4).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="var(--cool)" font-family="Bricolage Grotesque">${d.wetmixed}</text>`;
+    s+=`<text x="${cx}" y="${H-12}" text-anchor="middle" font-size="9" fill="var(--faint)">${ddshort(d.day).w}</text>`;
+    s+=`<text x="${cx}" y="${H-2}" text-anchor="middle" font-size="9" fill="var(--faint)">${ddshort(d.day).n}</text>`;});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}">${s}</svg>`;
+}
+
+/* ---------- render ---------- */
+function signSpan(v,u){if(Math.abs(v)<0.5)return`<span class="dim">±0 ${u}</span>`;const c=v>0?"up":"down";return`<span class="${c}">${v>0?"+":"−"}${r0(Math.abs(v))} ${u}</span>`;}
+
+function render(){
+  const day=DAYS[sel], part=isPartial(day);
+  const tot=totals(day), eTot=est(tot);
+  const prev=priorDay(day), prevTot=prev?totals(prev):null;
+  const base=avgBaseDays(part?prev||day:day); // 3 complete days
+  const {seg:avgSeg,tot:avgTot}=avgBlocks(base);
+  const avgEst=est(avgTot);
+
+  $("daylbl").innerHTML=fmtDay(day)+(part?"<small>latest export</small>":"<small>&nbsp;</small>");
+  $("prev").disabled=sel===0; $("next").disabled=sel===DAYS.length-1;
+  const syncT=tsTime(DATA.maxTs);
+  $("partialBadge").style.display=part?"inline-block":"none";
+  if(part)$("partialBadge").textContent="today · so far";
+  $("snapnote").innerHTML = part
+    ? `Synced through <b>${syncT}</b>. Feeds logged after that aren't in this export yet — re-export from Robin Baby and tap "Load export" to catch up.`
+    : "";
+
+  // ---- headline: cumulative intake through the latest completed time block ----
+  const effNow = part ? latestHour : 24;
+  let lastC=-1; BLOCKS.forEach((b,bi)=>{ if(b.e<=effNow) lastC=bi; });
+  const fullDay = !part || lastC>=BLOCKS.length-1;
+  const endLab=["4 AM","8 AM","12 PM","4 PM","8 PM","midnight"];
+  let winIdx, winName;
+  if(fullDay){ winIdx=BLOCKS.map((_,i)=>i); winName="Full day"; }
+  else if(lastC>=0){ winIdx=[]; for(let i=0;i<=lastC;i++)winIdx.push(i); winName="Through "+endLab[lastC]; }
+  else { winIdx=[0]; winName="Through "+tsTime(DATA.maxTs); }
+  const sumIdx=(dy,f)=>winIdx.reduce((a,bi)=>a+f(DATA.byDay[dy][bi]),0);
+  const winMl=sumIdx(day,est), winBml=sumIdx(day,c=>c.bml), winBmin=sumIdx(day,c=>c.bmin), winFeeds=sumIdx(day,c=>c.feeds);
+  const winAvg=winIdx.reduce((a,bi)=>a+est(avgSeg[bi]),0);
+
+  $("heroWindow").textContent="Intake · "+winName;
+  $("intake").textContent=r0(winMl);
+  $("split").innerHTML=`<b>${r0(winBml)} ml</b> bottle + <b>${r0(winBmin)} min</b> breast (≈${r0(winBmin*BREAST_ML_PER_MIN)} ml) · <b>${winFeeds}</b> feeds`;
+  if(base.length){
+    const dml=winMl-winAvg, pct=winAvg>0?dml/winAvg*100:null;
+    const cls=Math.abs(dml)<5?"dim":(dml>0?"up":"down"), sg=dml>=0?"+":"−";
+    $("heroCompare").innerHTML=`<span class="hc-avg">3-day avg<b>${r0(winAvg)} ml</b></span>`+
+      `<span class="hc-delta ${cls}">${sg}${r0(Math.abs(dml))} ml${pct!=null?` / ${sg}${r0(Math.abs(pct))}%`:""}</span>`;
+  } else $("heroCompare").innerHTML=`<span class="dim">Need 1–2 more days for a 3-day baseline.</span>`;
+
+  // stat cards (selected day, so far)
+  $("sFeeds").textContent=tot.feeds;
+  $("sPer").innerHTML=tot.feeds?r0(eTot/tot.feeds)+'<small> ml</small>':'—';
+  $("sWet").textContent=tot.wet;
+  $("sBreast").innerHTML=tot.breast?tot.breast+'<small> · '+r0(tot.bmin)+'m</small>':'0';
+
+  // daily intake + weight (last 10 days)
+  const last10=DAYS.slice(-10).map(d=>{const t=totals(d);const w=DATA.ev.filter(e=>e.day===d&&!isNaN(e.weight));return{day:d,bml:t.bml,bmin:t.bmin*BREAST_ML_PER_MIN,partial:isPartial(d),weight:w.length?toGrams(w[w.length-1].weight,w[w.length-1].wunit):null};});
+  comboChart($("intakeChart"),last10,{weight:false});
+  comboChart($("weightChart"),last10,{weight:true});
+
+  // block line chart: selected day vs 2 prior + 3-day avg
+  const cols=DAYS.slice(Math.max(0,sel-2),sel+1);
+  const priorTwo=cols.filter(d=>d!==day);
+  const palette=["#C4DED6","#8FC0B2"];
+  const series=[];
+  priorTwo.forEach((d,i)=>series.push({values:BLOCKS.map((_,bi)=>est(DATA.byDay[d][bi])),color:palette[i]||"#8FC0B2",w:2,op:.9,name:ddshort(d).w+' '+ddshort(d).n}));
+  series.push({values:avgSeg.map(c=>est(c)),color:"var(--cool)",w:2.5,dash:true,dots:true,label:true,below:true,name:"3-day avg"});
+  const selVals=BLOCKS.map((b,bi)=>(part&&b.s>latestHour)?null:est(DATA.byDay[day][bi]));
+  series.push({values:selVals,color:"var(--bottle)",w:3,dots:true,label:true,name:part?"Today (so far)":ddshort(day).w+' '+ddshort(day).n});
+  lineChart($("blockChart"),series,BLOCKS.map(b=>b.t),{});
+  $("blockLegend").innerHTML=series.map(se=>`<span><i class="${se.dash?'dash':'line'}" style="${se.dash?'border-color:'+se.color:'background:'+se.color}"></i>${se.name}</span>`).join("");
+
+  // table: Block | Today | 3-day avg | Δ | [3 backup days, plain]
+  const backup=base; // the 3 complete days behind the average
+  const todayLab=part?"Today<small>so far</small>":fmtDay(day).split(', ')[0]+`<small>${ddshort(day).n}</small>`;
+  let thead=`<th>Block</th><th class="hl hlT">${todayLab}</th><th class="hl">3-day avg<small>${base.length} days</small></th><th class="hl">Δ today–avg<small>ml / %</small></th>`+
+    backup.map(d=>`<th>${ddshort(d).w} ${ddshort(d).n}<small>&nbsp;</small></th>`).join("");
+  $("thead").innerHTML=thead;
+  const valCell=(c,future,cls)=>{if(future)return`<td class="${cls||''}"><span class="dim">—</span></td>`;const e=est(c);const pf=c.feeds?r0(e/c.feeds):0;return`<td class="${cls||''}"><div class="cellmain num">${r0(e)}<span class="dim" style="font-size:11px"> ml</span></div><div class="cellsub num">${r1(c.feeds)} fd · ${pf} ml/fd</div></td>`;};
+  const dCell=(tc,ac,show)=>{if(!show)return`<td class="hl"><span class="dim">—</span></td>`;const dml=est(tc)-est(ac),pct=est(ac)>0?dml/est(ac)*100:null;const cls=Math.abs(dml)<3?"dim":(dml>0?"up":"down"),sg=dml>=0?"+":"−";return`<td class="hl"><div class="cellmain num ${cls}">${sg}${r0(Math.abs(dml))}<span style="font-size:10px"> ml</span></div><div class="cellsub num ${cls}">${pct!=null?sg+r0(Math.abs(pct))+"%":"—"}</div></td>`;};
+  let rows=BLOCKS.map((b,bi)=>{
+    const reached=!(part&&b.s>latestHour);
+    const now=part&&latestHour>=b.s&&latestHour<b.e;
+    return`<tr><td><div class="rowname">${b.t}${now?'<span class="dot"></span>':''}</div></td>`+
+      valCell(DATA.byDay[day][bi],!reached,"hl hlT")+
+      valCell(avgSeg[bi],false,"hl")+
+      dCell(DATA.byDay[day][bi],avgSeg[bi],reached&&base.length>0)+
+      backup.map(d=>valCell(DATA.byDay[d][bi],false)).join("")+`</tr>`;
+  }).join("");
+  rows+=`<tr class="totrow"><td><div class="rowname">Total</div></td>`+
+    valCell(tot,false,"hl hlT")+
+    valCell(avgTot,false,"hl")+
+    dCell(tot,avgTot,!part&&base.length>0)+
+    backup.map(d=>valCell(totals(d),false)).join("")+`</tr>`;
+  $("tbody").innerHTML=rows;
+
+  // what's changing
+  miniBars($("freqChart"),last10,d=>totals(d.day).feeds,"var(--bottle)","");
+  miniBars($("perChart"),last10,d=>{const t=totals(d.day);return t.feeds?est(t)/t.feeds:0;},"#5BA08C","");
+
+  // diapers — wet/mixed vs total (difference = dirty)
+  $("diaperScope").textContent=`${fmtDay(day)}${part?' (so far)':''} · per-day chart last 7`;
+  $("dTotal").textContent=tot.changes;
+  $("dWet").textContent=tot.wet;
+  $("dWetAvg").textContent=base.length?`3-day avg ${r1(avgTot.wet)} of ${r1(avgTot.changes)}`:"";
+  diaperChart($("diaperChart"),DAYS.slice(-7).map(d=>{const t=totals(d);return{day:d,wetmixed:t.wet,total:t.changes};}));
+
+  const md=new Date(DATA.maxTs);
+  refreshFreshline();
+  $("footer").innerHTML=`Data through <b>${md.toLocaleDateString("en-US",{month:"short",day:"numeric"})}, ${tsTime(DATA.maxTs)}</b>. `+
+    `<b>Intake</b> = measured bottle ml + breast minutes estimated at <b>1 min ≈ 1 ml</b> — a placeholder until weighed feeds begin, which will replace the estimate with real transfer. `+
+    `<b>Pump</b> is Mom's supply, never counted as intake. The headline shows intake through the latest fully-completed 4-hour block, compared like-for-like to the 3-day average over the same window. <b>Weight</b> is normalized to grams across mixed g/lb entries. <b>Diapers:</b> wet/mixed = wet + mixed; total − wet/mixed = dirty-only.`;
+}
+
+let toastT; function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2800);}
+
+/* ---------- shared cloud (GitHub) ---------- */
+const CFG_KEY="vienna-cfg", CACHE_KEY="vienna-csv-cache";
+let cfg={repo:"",branch:"main",path:"data.csv",token:""}, LAST_CSV=null, LOADED_AT=null;
+const lsGet=k=>{try{return localStorage.getItem(k);}catch(_){return null;}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(_){}};
+const b64=t=>btoa(unescape(encodeURIComponent(t)));
+function loadCfg(){try{cfg=Object.assign(cfg,JSON.parse(lsGet(CFG_KEY)||"{}"));}catch(_){}}
+function fillCfg(){$("cfgRepo").value=cfg.repo||"";$("cfgBranch").value=cfg.branch||"main";$("cfgPath").value=cfg.path||"data.csv";$("cfgToken").value=cfg.token||"";}
+function saveCfg(){cfg={repo:$("cfgRepo").value.trim(),branch:($("cfgBranch").value.trim()||"main"),path:($("cfgPath").value.trim()||"data.csv"),token:$("cfgToken").value.trim()};lsSet(CFG_KEY,JSON.stringify(cfg));updateButtons();}
+function status(m){$("cfgStatus").textContent=m||"";}
+function updateButtons(){$("refreshBtn").style.display=cfg.repo?"inline-block":"none";$("publishBtn").style.display=(cfg.repo&&cfg.token)?"inline-block":"none";}
+function refreshFreshline(){
+  const el=$("freshline"); if(!el||!DATA)return;
+  const entryMs=new Date(DATA.maxTs).getTime();
+  const ageH=(Date.now()-entryMs)/3.6e6;
+  const warn=ageH>=3;
+  let html=`<span class="fdot ${warn?'warn':''}"></span><span>Latest entry <b>${tsTime(DATA.maxTs)}</b> · ${relAge(entryMs)}</span>`;
+  if(cfg.repo&&LOADED_AT) html+=`<span class="sep">·</span><span>pulled ${relAge(LOADED_AT)}</span>`;
+  el.innerHTML=html;
+}
+setInterval(()=>{try{refreshFreshline();}catch(_){}},60000);
+
+async function fetchCloud(announce){
+  if(!cfg.repo)return false;
+  const url=`https://raw.githubusercontent.com/${cfg.repo}/${encodeURIComponent(cfg.branch)}/${cfg.path}?t=${Date.now()}`;
+  try{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);
+    const t=await r.text();
+    if(loadFrom(t,false)){lsSet(CACHE_KEY,t);if(announce)toast("Refreshed from cloud ✓");return true;}
+  }catch(e){if(announce)toast("Couldn't reach the repo — showing last loaded data.");}
+  return false;
+}
+async function publishCloud(){
+  if(!cfg.repo||!cfg.token){status("Add a repo and a publish token first.");toast("Add repo + token in ⚙ first.");return;}
+  if(!LAST_CSV){status("Load an export first, then publish.");toast("Load an export first.");return;}
+  status("Publishing…");
+  const api=`https://api.github.com/repos/${cfg.repo}/contents/${cfg.path}`;
+  const hdr={Authorization:"Bearer "+cfg.token,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
+  let sha;
+  try{const g=await fetch(api+"?ref="+encodeURIComponent(cfg.branch),{headers:hdr});if(g.ok)sha=(await g.json()).sha;}catch(_){}
+  const body={message:"Update data.csv "+new Date().toISOString(),content:b64(LAST_CSV),branch:cfg.branch};
+  if(sha)body.sha=sha;
+  try{const r=await fetch(api,{method:"PUT",headers:hdr,body:JSON.stringify(body)});
+    if(r.ok){status("Published ✓ Tara's dashboard shows it on next refresh.");toast("Published to cloud ✓");}
+    else{const e=await r.json().catch(()=>({}));status("Publish failed: "+(e.message||("HTTP "+r.status))+(r.status===401||r.status===403?" — check the token's repo access.":""));toast("Publish failed — see ⚙.");}
+  }catch(err){status("Publish failed: "+err.message);toast("Publish failed — see ⚙.");}
+}
+
+function loadFrom(text,announce){try{const ev=parseCSV(text);build(ev);LAST_CSV=text;LOADED_AT=Date.now();render();lsSet(CACHE_KEY,text);if(announce){const md=new Date(DATA.maxTs);toast(`Loaded ${ev.length} events · through ${md.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`);}return true;}catch(e){if(announce!==null)toast("Couldn't read that — expected a Robin Baby CSV export.");return false;}}
+
+$("prev").onclick=()=>{if(sel>0){sel--;render();}};
+$("next").onclick=()=>{if(sel<DAYS.length-1){sel++;render();}};
+$("uploadBtn").onclick=()=>$("file").click();
+$("file").onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{if(loadFrom(rd.result,true)&&cfg.repo&&cfg.token)toast("Loaded. Tap Publish ↑ to share with Tara.");};rd.readAsText(f);e.target.value="";};
+$("refreshBtn").onclick=()=>fetchCloud(true);
+$("publishBtn").onclick=publishCloud;
+$("settingsBtn").onclick=()=>{const p=$("settings");const show=p.style.display==="none";if(show)fillCfg();p.style.display=show?"block":"none";status("");};
+$("cfgSave").onclick=()=>{saveCfg();status(cfg.repo?"Saved. Loading from cloud…":"Saved.");if(cfg.repo)fetchCloud(true);};
+$("cfgPublish").onclick=publishCloud;
+$("cfgClose").onclick=()=>{$("settings").style.display="none";};
+
+(async function init(){
+  loadCfg(); updateButtons();
+  let ok=false;
+  if(cfg.repo) ok=await fetchCloud(false);
+  if(!ok){
+    const cached=lsGet(CACHE_KEY);
+    if(cached&&loadFrom(cached,null)) ok=true;
+  }
+  if(!ok){let text;try{text=decodeURIComponent(escape(atob(SEED_B64)));}catch(_){text=atob(SEED_B64);}loadFrom(text,null);}
+})();
+</script>
+</body>
+</html>
